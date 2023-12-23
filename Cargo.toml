@@ -1,7 +1,9 @@
 [workspace]
 
 members = [
-  "gecko-cli"
+  "gecko-cli",
+  "gecko-lexer",
+  "gecko-error"
 ]
 
 resolver = "2"
