@@ -1,0 +1,7 @@
+[workspace]
+
+members = [
+  "gecko-cli"
+]
+
+resolver = "2"
