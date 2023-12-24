@@ -3,7 +3,7 @@ pub mod token;
 
 use std::collections::HashMap;
 
-use gecko_error::Error;
+use gecko_error::{Error, LineInfo};
 
 pub struct Lexer {
     pub input: String,
@@ -34,6 +34,7 @@ impl Lexer {
                 keywords.insert(String::from("fn"), ttype::TType::FN);
                 keywords.insert(String::from("let"), ttype::TType::LET);
                 keywords.insert(String::from("return"), ttype::TType::RETURN);
+                keywords.insert(String::from("import"), ttype::TType::IMPORT);
                 keywords
             },
         }
@@ -48,7 +49,7 @@ impl Lexer {
         self.tokens.push(token::Token::new(
             ttype::TType::EOF,
             String::from(""),
-            self.line,
+            LineInfo::new(self.line, self.start, self.current),
         ));
 
         Ok(self.tokens.clone())
@@ -112,8 +113,25 @@ impl Lexer {
             ' ' | '\r' | '\t' => {}
             '\n' => self.line += 1,
             '"' => {
-                todo!("scan token string")
-            }
+                while self.peek() != '"' && !self.is_at_end() {
+                    if self.peek() == '\n' {
+                        self.line += 1;
+                    }
+                    self.advance();
+                }
+
+                if self.is_at_end() {
+                    return Err(Error::new(
+                        gecko_error::LineInfo::new(self.line, self.start, self.current),
+                        String::from("Unterminated string"),
+                    ));
+                }
+
+                self.advance();
+
+                let value = self.input[self.start + 1..self.current - 1].to_string();
+                self.add_token(ttype::TType::String(value));
+            },
             _ => {
                 if Lexer::is_digit(c) {
                     while Lexer::is_digit(self.peek()) {
@@ -167,7 +185,8 @@ impl Lexer {
     }
 
     fn is_alphanumeric(c: char) -> bool {
-        Lexer::is_alpha(c) || Lexer::is_digit(c)
+        // include emojis
+        Lexer::is_alpha(c) || Lexer::is_digit(c) || c.is_ascii_punctuation()
     }
 
     fn is_digit(c: char) -> bool {
@@ -198,7 +217,7 @@ impl Lexer {
     fn add_token(&mut self, ttype: ttype::TType) {
         let text = self.input[self.start..self.current].to_string();
         self.tokens
-            .push(token::Token::new(ttype, text, self.line));
+            .push(token::Token::new(ttype, text, LineInfo::new(self.line, self.start, self.current)));
     }
 
     fn advance(&mut self) -> char {

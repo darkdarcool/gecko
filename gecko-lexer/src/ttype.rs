@@ -2,6 +2,7 @@
 pub enum TType {
     Identifier(String),
     Number(f64),
+    String(String),
 
     EQ, // =
     PLUS, // +
@@ -35,4 +36,5 @@ pub enum TType {
     FN, // fn
     LET, // let
     RETURN, // return
+    IMPORT, // import
 }

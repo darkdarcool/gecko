@@ -1,11 +1,10 @@
 [package]
-name = "gecko-cli"
+name = "gecko-inspector"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-gecko-lexer = { path = "../gecko-lexer" }
+tinyjson = "2.5.1"
 gecko-parser = { path = "../gecko-parser" }
-gecko-inspector = { path = "../gecko-inspector" }

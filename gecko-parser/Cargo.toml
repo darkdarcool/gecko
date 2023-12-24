@@ -1,5 +1,5 @@
 [package]
-name = "gecko-cli"
+name = "gecko-parser"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,5 +7,5 @@ edition = "2021"
 
 [dependencies]
 gecko-lexer = { path = "../gecko-lexer" }
-gecko-parser = { path = "../gecko-parser" }
-gecko-inspector = { path = "../gecko-inspector" }
+gecko-error = { path = "../gecko-error" }
+

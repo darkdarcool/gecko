@@ -4,6 +4,6 @@ members = [
   "gecko-cli",
   "gecko-lexer",
   "gecko-error"
-]
+, "gecko-parser", "gecko-inspector"]
 
 resolver = "2"

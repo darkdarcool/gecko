@@ -1,18 +1,20 @@
+use gecko_error::LineInfo;
+
 use crate::ttype::TType;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token {
     pub ttype: TType,
     pub lexeme: String,
-    pub line: usize,
+    pub lineinfo: LineInfo,
 }
 
 impl Token {
-    pub fn new(ttype: TType, lexeme: String, line: usize) -> Token {
+    pub fn new(ttype: TType, lexeme: String, lineinfo: LineInfo) -> Token {
         Token {
             ttype,
             lexeme,
-            line,
+            lineinfo,
         }
     }
 

@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct LineInfo {
     pub line: usize,
     pub start: usize,
@@ -32,6 +32,14 @@ impl Error {
     pub fn new(line_info: LineInfo, message: String) -> Error {
         Error {
             line_info,
+            message,
+            notes: vec![],
+        }
+    }
+
+    pub fn new_without_line_info(message: String) -> Error {
+        Error {
+            line_info: LineInfo::new(0, 0, 0),
             message,
             notes: vec![],
         }
