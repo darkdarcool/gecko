@@ -35,6 +35,8 @@ impl Lexer {
                 keywords.insert(String::from("let"), ttype::TType::LET);
                 keywords.insert(String::from("return"), ttype::TType::RETURN);
                 keywords.insert(String::from("import"), ttype::TType::IMPORT);
+                keywords.insert(String::from("number"), ttype::TType::NUMBER);
+                keywords.insert(String::from("string"), ttype::TType::STRING);
                 keywords
             },
         }
@@ -65,7 +67,14 @@ impl Lexer {
             '}' => self.add_token(ttype::TType::RBRACE),
             ',' => self.add_token(ttype::TType::COMMA),
             '.' => self.add_token(ttype::TType::DOT),
-            '-' => self.add_token(ttype::TType::MINUS),
+            '-' => {
+                let ttype = if self.match_char('>') {
+                    ttype::TType::ARROW
+                } else {
+                    ttype::TType::MINUS
+                };
+                self.add_token(ttype);
+            },
             '+' => self.add_token(ttype::TType::PLUS),
             ';' => self.add_token(ttype::TType::SEMICOLON),
             '*' => self.add_token(ttype::TType::STAR),
@@ -186,7 +195,7 @@ impl Lexer {
 
     fn is_alphanumeric(c: char) -> bool {
         // include emojis
-        Lexer::is_alpha(c) || Lexer::is_digit(c) || c.is_ascii_punctuation()
+        Lexer::is_alpha(c) || Lexer::is_digit(c)
     }
 
     fn is_digit(c: char) -> bool {

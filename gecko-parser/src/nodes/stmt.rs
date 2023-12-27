@@ -1,4 +1,6 @@
-use super::expr::Expr;
+use gecko_lexer::token::Token;
+
+use super::{expr::Expr, Param};
 
 #[derive(Clone, Debug)]
 pub struct Var {
@@ -18,5 +20,8 @@ impl Var {
 #[derive(Clone, Debug)]
 pub enum Stmt {
     ExprStmt(Expr),
-    VarDecl(Var)
+    VarDecl(Var),
+    /// name, params, body
+    FnDecl(String, Vec<Param>, Vec<Stmt>, Option<Token>),
+    Return(Option<Expr>),
 }

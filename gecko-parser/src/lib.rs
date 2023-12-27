@@ -1,8 +1,8 @@
 pub mod nodes;
 
-use std::rc::Rc;
+use std::{rc::Rc, vec};
 
-use nodes::{expr::{Expr, Type}, stmt::{Stmt, Var}};
+use nodes::{expr::{Expr, Type}, stmt::{Stmt, Var}, Param};
 
 use gecko_lexer::{token::Token, ttype::TType};
 use gecko_error::{Error, LineInfo};
@@ -31,9 +31,98 @@ impl Parser {
     fn stmt(&mut self) -> Result<Stmt, Error> {
         if self.match_token(vec![TType::LET]) {
             return self.var_decl();
+        } else if self.match_token(vec![TType::FN]) {
+            return self.fn_decl();
+        } else if self.match_token(vec![TType::RETURN]) {
+            return self.return_stmt();
         }
 
         self.expr_stmt()
+    }
+
+    fn fn_decl(&mut self) -> Result<Stmt, Error> {
+        if let TType::Identifier(name) = self.peek().ttype {
+            self.advance();
+            self.consume(TType::LPAREN, "Expect '(' after function name.".to_string())?;
+            let mut params: Vec<Param> = Vec::new();
+            if !self.check(TType::RPAREN) {
+                loop {
+                    if params.len() >= 255 {
+                        let tok = self.peek();
+                        return Err(Error::new_with_notes(
+                            LineInfo::new(tok.lineinfo.line, tok.lineinfo.start, tok.lineinfo.end),
+                            "Cannot have more than 255 parameters.".to_string(),
+                            vec![],
+                        ));
+                    }
+
+                    if let TType::Identifier(name) = self.peek().ttype {
+                        self.advance();
+                        self.consume(TType::COLON, "Expect type after param".to_string())?;
+                        let tok = self.advance();
+
+
+                        let param = Param::new(name, tok);
+                        params.push(param);
+                    } else {
+                        let tok = self.peek();
+                        return Err(Error::new_with_notes(
+                            LineInfo::new(tok.lineinfo.line, tok.lineinfo.start, tok.lineinfo.end),
+                            "Expect parameter name.".to_string(),
+                            vec![],
+                        ));
+                    }
+
+                    if !self.match_token(vec![TType::COMMA]) {
+                        break;
+                    }
+                }
+            }
+            self.consume(TType::RPAREN, "Expect ')' after parameters.".to_string())?;
+
+            let return_value = if self.match_token(vec![TType::ARROW]) {
+                Some(self.advance())
+            } else {
+                None
+            };
+
+            self.consume(TType::LBRACE, "Expect '{' before function body.".to_string())?;
+
+            let body = self.block()?;
+            Ok(Stmt::FnDecl(name, params, body, return_value))
+        } else {
+            let tok = self.peek();
+            return Err(Error::new_with_notes(
+                LineInfo::new(tok.lineinfo.line, tok.lineinfo.start, tok.lineinfo.end),
+                "Expect function name.".to_string(),
+                vec![],
+            ));
+        }
+    }
+
+    fn return_stmt(&mut self) -> Result<Stmt, Error> {
+        let _keyword = self.previous();
+        let value = if !self.check(TType::SEMICOLON) {
+            Some(self.expression()?)
+        } else {
+            None
+        };
+
+        self.consume(TType::SEMICOLON, "Expect ';' after return value.".to_string())?;
+
+        Ok(Stmt::Return(value))
+    }
+
+    fn block(&mut self) -> Result<Vec<Stmt>, Error> {
+        let mut stmts = Vec::new();
+
+        while !self.check(TType::RBRACE) && !self.is_at_end() {
+            stmts.push(self.stmt()?);
+        }
+
+        self.consume(TType::RBRACE, "Expect '}' after block.".to_string())?;
+
+        Ok(stmts)
     }
 
     fn var_decl(&mut self) -> Result<Stmt, Error> {

@@ -37,6 +37,12 @@ fn expr_to_json(expr: Expr) -> JsonValue {
             let json = JsonValue::Object(binary);
             add_name_to_json(String::from("Binary"), json)
         },
+        Expr::Variable(var) => {
+            let mut variable: HashMap<String, JsonValue> = HashMap::new();
+            variable.insert(String::from("name"), JsonValue::String(var.lexeme));
+            let json = JsonValue::Object(variable);
+            add_name_to_json(String::from("Variable"), json)
+        },
         _ => JsonValue::Null,
     }
 }
@@ -48,8 +54,33 @@ fn stmt_to_json(stmt: Stmt) -> JsonValue {
             var_decl.insert(String::from("name"), JsonValue::String(var.name));
             var_decl.insert(String::from("initializer"), expr_to_json(var.initializer.unwrap()));
             let json = JsonValue::Object(var_decl);
-            add_name_to_json(String::from("VarDecl"), json)
-        }
+            add_name_to_json(String::from("VarDeclStmt"), json)
+        },
+        Stmt::ExprStmt(expr) => {
+            let mut expr_stmt: HashMap<String, JsonValue> = HashMap::new();
+            expr_stmt.insert(String::from("expression"), expr_to_json(expr));
+            let json = JsonValue::Object(expr_stmt);
+            add_name_to_json(String::from("ExprStmt"), json)
+        },
+        Stmt::FnDecl(name, params, body, return_type) => {
+            let mut fn_decl: HashMap<String, JsonValue> = HashMap::new();
+            fn_decl.insert(String::from("name"), JsonValue::String(name));
+            fn_decl.insert(String::from("params"), JsonValue::Array(params.into_iter().map(|p| JsonValue::String(p.name)).collect()));
+            fn_decl.insert(String::from("body"), JsonValue::Array(body.into_iter().map(|s| stmt_to_json(s)).collect()));
+            if let Some(t) = return_type {
+                fn_decl.insert(String::from("return_type"), JsonValue::String(t.lexeme));
+            } else {
+                fn_decl.insert(String::from("return_type"), JsonValue::Null);
+            }
+            let json = JsonValue::Object(fn_decl);
+            add_name_to_json(String::from("FnDecl"), json)
+        },
+        Stmt::Return(expr) => {
+            let mut return_stmt: HashMap<String, JsonValue> = HashMap::new();
+            return_stmt.insert(String::from("expression"), expr_to_json(expr.unwrap()));
+            let json = JsonValue::Object(return_stmt);
+            add_name_to_json(String::from("ReturnStmt"), json)
+        },
         _ => JsonValue::Null,
     }
 }

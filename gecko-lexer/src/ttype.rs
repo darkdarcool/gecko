@@ -37,4 +37,7 @@ pub enum TType {
     LET, // let
     RETURN, // return
     IMPORT, // import
+
+    NUMBER, // number
+    STRING, // string
 }
