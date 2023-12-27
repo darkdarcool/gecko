@@ -2,7 +2,7 @@ pub mod nodes;
 
 use std::{rc::Rc, vec};
 
-use nodes::{expr::{Expr, Type}, stmt::{Stmt, Var}, Param};
+use nodes::{expr::{Expr, Type, BinaryExpr, UnaryExpr, LiteralExpr, GroupingExpr}, stmt::{Stmt, Var, Fn}, Param};
 
 use gecko_lexer::{token::Token, ttype::TType};
 use gecko_error::{Error, LineInfo};
@@ -35,9 +35,50 @@ impl Parser {
             return self.fn_decl();
         } else if self.match_token(vec![TType::RETURN]) {
             return self.return_stmt();
+        } else if self.match_token(vec![TType::IMPORT]) {
+            return self.import_stmt();
         }
 
         self.expr_stmt()
+    }
+
+    fn import_stmt(&mut self) -> Result<Stmt, Error> {
+        if let TType::String(path) = self.peek().ttype {
+            self.advance();
+            self.consume(TType::SEMICOLON, "Expect ';' after import path.".to_string())?;
+            Ok(Stmt::FileImport(path))
+        } else if let TType::Identifier(name) = self.peek().ttype {
+            let mut paths = vec![name];
+            self.advance();
+
+            while self.match_token(vec![TType::DOT]) {
+                if let TType::Identifier(name) = self.peek().ttype {
+                    paths.push(name);
+                    self.advance();
+                } else {
+                    let tok = self.peek();
+                    return Err(Error::new_with_notes(
+                        LineInfo::new(tok.lineinfo.line, tok.lineinfo.start, tok.lineinfo.end),
+                        "Expect import path.".to_string(),
+                        vec![],
+                    ));
+                }
+            }
+
+            println!("{:?}", self.peek());
+
+
+            self.consume(TType::SEMICOLON, "Expect ';' after import path.".to_string())?;
+
+            Ok(Stmt::LangImport(paths))
+        } else {
+            let tok = self.peek();
+            return Err(Error::new_with_notes(
+                LineInfo::new(tok.lineinfo.line, tok.lineinfo.start, tok.lineinfo.end),
+                "Expect import path.".to_string(),
+                vec![],
+            ));
+        }
     }
 
     fn fn_decl(&mut self) -> Result<Stmt, Error> {
@@ -89,7 +130,9 @@ impl Parser {
             self.consume(TType::LBRACE, "Expect '{' before function body.".to_string())?;
 
             let body = self.block()?;
-            Ok(Stmt::FnDecl(name, params, body, return_value))
+            Ok(Stmt::FnDecl(
+                Fn::new(name, params, body, return_value)
+            ))
         } else {
             let tok = self.peek();
             return Err(Error::new_with_notes(
@@ -175,7 +218,7 @@ impl Parser {
         while self.match_token(vec![TType::EQEQ, TType::BANGEQ]) {
             let operator = self.previous();
             let right = self.comparison()?;
-            expr = Expr::Binary(Rc::new(expr), operator, Rc::new(right));
+            expr = Expr::Binary(BinaryExpr::new(Rc::new(expr), operator, Rc::new(right)));
         }
 
         Ok(expr)
@@ -201,9 +244,7 @@ impl Parser {
             let right = self.term()?;
 
             return Ok(Expr::Binary(
-                Rc::new(expr),
-                operator,
-                Rc::new(right),
+                BinaryExpr::new(Rc::new(expr), operator, Rc::new(right)),
             ));
         }
 
@@ -217,9 +258,7 @@ impl Parser {
             let right = self.factor()?;
 
             return Ok(Expr::Binary(
-                Rc::new(expr),
-                operator,
-                Rc::new(right),
+                BinaryExpr::new(Rc::new(expr), operator, Rc::new(right)),
             ));
         }
 
@@ -231,7 +270,9 @@ impl Parser {
             let operator = self.previous();
             let right = self.unary()?;
 
-            return Ok(Expr::Unary(operator, Rc::new(right)));
+            return Ok(Expr::Unary(
+                UnaryExpr::new(operator, Rc::new(right)),
+            ));
         }
 
         self.primary()
@@ -239,9 +280,13 @@ impl Parser {
 
     fn primary(&mut self) -> Result<Expr, Error> {
         if self.match_token(vec![TType::FALSE]) {
-            return Ok(Expr::Literal(Type::Bool(false)))
+            return Ok(Expr::Literal(
+                LiteralExpr::new(Type::Bool(false)),
+            ))
         } else if self.match_token(vec![TType::TRUE]) {
-            return Ok(Expr::Literal(Type::Bool(true)))
+            return Ok(Expr::Literal(
+                LiteralExpr::new(Type::Bool(true)),
+            ))
         } else if self.match_token(vec![TType::LPAREN]) {
             let expr = self.expression()?;
 
@@ -253,22 +298,31 @@ impl Parser {
                     vec![],
                 ));
             } else {
-                return Ok(Expr::Grouping(Rc::new(expr)));
+                return Ok(Expr::Grouping(
+                    GroupingExpr::new(Rc::new(expr)),
+                ));
             }
         }
 
         match self.peek().ttype {
             TType::Number(num) => {
                 self.advance();
-                Ok(Expr::Literal(Type::Float(num)))
+                Ok(Expr::Literal(
+                    LiteralExpr::new(Type::Float(num)),
+
+                ))
             }
             TType::String(string) => {
                 self.advance();
-                Ok(Expr::Literal(Type::String(string)))
+                Ok(Expr::Literal(
+                    LiteralExpr::new(Type::String(string)),
+                ))
             }
-            TType::Identifier(_) => {
+            TType::Identifier(name) => {
                 self.advance();
-                Ok(Expr::Variable(self.previous()))
+                Ok(Expr::Literal(
+                    LiteralExpr::new(Type::Iden(name)),
+                ))
             }
             _ => {
                 let tok = self.peek();

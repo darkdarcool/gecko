@@ -1,4 +1,1 @@
-fn one() -> number {
-    let two = 2;
-    return two - 1;
-}
+import "./shaw.gk";

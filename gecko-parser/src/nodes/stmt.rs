@@ -18,10 +18,31 @@ impl Var {
 }
 
 #[derive(Clone, Debug)]
+pub struct Fn {
+    pub name: String,
+    pub params: Vec<Param>,
+    pub body: Vec<Stmt>,
+    pub return_type: Option<Token>,
+}
+
+impl Fn {
+    pub fn new(name: String, params: Vec<Param>, body: Vec<Stmt>, return_type: Option<Token>) -> Fn {
+        Fn {
+            name,
+            params,
+            body,
+            return_type,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
 pub enum Stmt {
     ExprStmt(Expr),
     VarDecl(Var),
     /// name, params, body
-    FnDecl(String, Vec<Param>, Vec<Stmt>, Option<Token>),
+    FnDecl(Fn),
     Return(Option<Expr>),
+    LangImport(Vec<String>),
+    FileImport(String),
 }

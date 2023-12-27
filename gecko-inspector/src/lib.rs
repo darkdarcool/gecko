@@ -16,6 +16,7 @@ fn type_to_string(t: Type) -> String {
         Type::Float(f) => format!("Float({})", f),
         Type::String(s) => format!("String({})", s),
         Type::Bool(b) => format!("Bool({})", b),
+        Type::Iden(i) => format!("Iden({})", i),
         Type::Void => String::from("Void"),
         Type::Unknown => String::from("Unknown"),
     }
@@ -25,28 +26,29 @@ fn expr_to_json(expr: Expr) -> JsonValue {
     match expr {
         Expr::Literal(lit) => {
             let mut literal: HashMap<String, JsonValue> = HashMap::new();
-            literal.insert(String::from("value"), JsonValue::String(type_to_string(lit)));
+            literal.insert(String::from("value"), JsonValue::String(type_to_string(lit.value)));
             let json = JsonValue::Object(literal);
             add_name_to_json(String::from("Literal"), json)
         },
-        Expr::Binary(left, op, right) => {
+        Expr::Binary(expr) => {
             let mut binary: HashMap<String, JsonValue> = HashMap::new();
-            binary.insert(String::from("left"), expr_to_json(left.as_ref().clone()));
-            binary.insert(String::from("operator"), JsonValue::String(op.lexeme));
-            binary.insert(String::from("right"), expr_to_json(right.as_ref().clone()));
+            binary.insert(String::from("left"), expr_to_json(expr.left.as_ref().clone()));
+            binary.insert(String::from("operator"), JsonValue::String(expr.operator.lexeme));
+            binary.insert(String::from("right"), expr_to_json(expr.right.as_ref().clone()));
             let json = JsonValue::Object(binary);
             add_name_to_json(String::from("Binary"), json)
         },
-        Expr::Variable(var) => {
-            let mut variable: HashMap<String, JsonValue> = HashMap::new();
-            variable.insert(String::from("name"), JsonValue::String(var.lexeme));
-            let json = JsonValue::Object(variable);
-            add_name_to_json(String::from("Variable"), json)
-        },
+        // Expr::Variable(var) => {
+        //     let mut variable: HashMap<String, JsonValue> = HashMap::new();
+        //     variable.insert(String::from("name"), JsonValue::String(var.lexeme));
+        //     let json = JsonValue::Object(variable);
+        //     add_name_to_json(String::from("Variable"), json)
+        // },
         _ => JsonValue::Null,
     }
 }
 
+#[allow(unreachable_patterns)]
 fn stmt_to_json(stmt: Stmt) -> JsonValue {
     match stmt {
         Stmt::VarDecl(var) => {
@@ -62,15 +64,15 @@ fn stmt_to_json(stmt: Stmt) -> JsonValue {
             let json = JsonValue::Object(expr_stmt);
             add_name_to_json(String::from("ExprStmt"), json)
         },
-        Stmt::FnDecl(name, params, body, return_type) => {
+        Stmt::FnDecl(func) => {
             let mut fn_decl: HashMap<String, JsonValue> = HashMap::new();
-            fn_decl.insert(String::from("name"), JsonValue::String(name));
-            fn_decl.insert(String::from("params"), JsonValue::Array(params.into_iter().map(|p| JsonValue::String(p.name)).collect()));
-            fn_decl.insert(String::from("body"), JsonValue::Array(body.into_iter().map(|s| stmt_to_json(s)).collect()));
-            if let Some(t) = return_type {
-                fn_decl.insert(String::from("return_type"), JsonValue::String(t.lexeme));
+            fn_decl.insert(String::from("name"), JsonValue::String(func.name));
+            fn_decl.insert(String::from("params"), JsonValue::Array(func.params.into_iter().map(|p| JsonValue::String(p.name)).collect()));
+            fn_decl.insert(String::from("body"), JsonValue::Array(func.body.into_iter().map(|s| stmt_to_json(s)).collect()));
+            if let Some(t) = func.return_type {
+                fn_decl.insert(String::from("rtype"), JsonValue::String(t.lexeme));
             } else {
-                fn_decl.insert(String::from("return_type"), JsonValue::Null);
+                fn_decl.insert(String::from("rtype"), JsonValue::Null);
             }
             let json = JsonValue::Object(fn_decl);
             add_name_to_json(String::from("FnDecl"), json)
@@ -80,6 +82,18 @@ fn stmt_to_json(stmt: Stmt) -> JsonValue {
             return_stmt.insert(String::from("expression"), expr_to_json(expr.unwrap()));
             let json = JsonValue::Object(return_stmt);
             add_name_to_json(String::from("ReturnStmt"), json)
+        },
+        Stmt::FileImport(path) => {
+            let mut file_import: HashMap<String, JsonValue> = HashMap::new();
+            file_import.insert(String::from("path"), JsonValue::String(path));
+            let json = JsonValue::Object(file_import);
+            add_name_to_json(String::from("FileImportStmt"), json)
+        },
+        Stmt::LangImport(langs) => {
+            let mut lang_import: HashMap<String, JsonValue> = HashMap::new();
+            lang_import.insert(String::from("modules"), JsonValue::Array(langs.into_iter().map(|l| JsonValue::String(l)).collect()));
+            let json = JsonValue::Object(lang_import);
+            add_name_to_json(String::from("LangImportStmt"), json)
         },
         _ => JsonValue::Null,
     }
