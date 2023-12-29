@@ -2,7 +2,7 @@ pub mod nodes;
 
 use std::{rc::Rc, vec};
 
-use nodes::{expr::{Expr, Type, BinaryExpr, UnaryExpr, LiteralExpr, GroupingExpr}, stmt::{Stmt, Var, Fn}, Param};
+use nodes::{expr::{Expr, Type, BinaryExpr, UnaryExpr, LiteralExpr, GroupingExpr, CallExpr, GetExpr}, stmt::{Stmt, Var, Fn}, Param};
 
 use gecko_lexer::{token::Token, ttype::TType};
 use gecko_error::{Error, LineInfo};
@@ -275,7 +275,58 @@ impl Parser {
             ));
         }
 
-        self.primary()
+        self.call()
+    }
+
+    fn call(&mut self) -> Result<Expr, Error> {
+        let mut expr = self.primary()?;
+
+        loop {
+            if self.match_token(vec![TType::LPAREN]) {
+                expr = self.finish_call(expr)?;
+            } else if self.match_token(vec![TType::DOT]) {
+                println!("{:?}", self.peek());
+                let name = self.consume_any_identifier("Expect property name after '.'.".to_string())?;
+
+                expr = Expr::Get(
+                    GetExpr::new(Rc::new(expr), name),
+                );
+            }
+            else {
+                break;
+            }
+        }
+
+        Ok(expr)
+    }
+
+    fn finish_call(&mut self, expr: Expr) -> Result<Expr, Error> {
+        let mut args = Vec::new();
+
+        if !self.check(TType::RPAREN) {
+            loop {
+                if args.len() >= 255 {
+                    let tok = self.peek();
+                    return Err(Error::new_with_notes(
+                        LineInfo::new(tok.lineinfo.line, tok.lineinfo.start, tok.lineinfo.end),
+                        "Cannot have more than 255 arguments.".to_string(),
+                        vec![],
+                    ));
+                }
+
+                args.push(Rc::new(self.expression()?));
+
+                if !self.match_token(vec![TType::COMMA]) {
+                    break;
+                }
+            }
+        }
+
+        let paren = self.consume(TType::RPAREN, "Expect ')' after arguments.".to_string())?;
+
+        Ok(Expr::Call(
+            CallExpr::new(Rc::new(expr), paren, args),
+        ))
     }
 
     fn primary(&mut self) -> Result<Expr, Error> {
@@ -337,6 +388,19 @@ impl Parser {
 
     fn consume(&mut self, ttype: TType, message: String) -> Result<Token, Error> {
         if self.check(ttype) {
+            Ok(self.advance())
+        } else {
+            let tok = self.peek();
+            Err(Error::new_with_notes(
+                LineInfo::new(tok.lineinfo.line, tok.lineinfo.start, tok.lineinfo.end),
+                message,
+                vec![],
+            ))
+        }
+    }
+
+    fn consume_any_identifier(&mut self, message: String) -> Result<Token, Error> {
+        if let TType::Identifier(_) = self.peek().ttype {
             Ok(self.advance())
         } else {
             let tok = self.peek();

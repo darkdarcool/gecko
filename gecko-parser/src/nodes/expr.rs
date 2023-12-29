@@ -65,10 +65,51 @@ impl UnaryExpr {
     }
 }
 
+/*
+Ok(Expr::Call(
+            CallExpr::new(Rc::new(expr), paren, args),
+        ))
+ */
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct CallExpr {
+    pub callee: Rc<Expr>,
+    pub paren: Token,
+    pub args: Vec<Rc<Expr>>,
+}
+
+impl CallExpr {
+    pub fn new(callee: Rc<Expr>, paren: Token, args: Vec<Rc<Expr>>) -> Self {
+        Self {
+            callee,
+            paren,
+            args,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct GetExpr {
+    pub object: Rc<Expr>,
+    pub name: Token,
+}
+
+impl GetExpr {
+    pub fn new(object: Rc<Expr>, name: Token) -> Self {
+        Self { object, name }
+    }
+}
+
+// Expr::Get(
+//    GetExpr::new(Rc::new(expr), name),
+// );
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     Literal(LiteralExpr),
     Grouping(GroupingExpr),
     Binary(BinaryExpr),
     Unary(UnaryExpr),
+    Call(CallExpr),
+    Get(GetExpr)
 }

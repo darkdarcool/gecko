@@ -15,13 +15,17 @@ fn read_file(path: &String) -> String {
 fn main() {
     let content = read_file(&String::from("test.gk"));
     let input = String::from(content);
+    let stmts;
+
     let mut lexer = Lexer::new(input);
     let tokens = lexer.scan_tokens().unwrap();
 
     let mut parser = Parser::new(tokens);
-    let stmts = parser.parse().unwrap();
+    stmts = parser.parse().unwrap();
+
 
     let output = inspect(stmts);
 
     println!("{}", output);
+
 }

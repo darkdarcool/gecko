@@ -38,6 +38,20 @@ fn expr_to_json(expr: Expr) -> JsonValue {
             let json = JsonValue::Object(binary);
             add_name_to_json(String::from("Binary"), json)
         },
+        Expr::Call(expr) => {
+            let mut call: HashMap<String, JsonValue> = HashMap::new();
+            call.insert(String::from("callee"), expr_to_json(expr.callee.as_ref().clone()));
+            call.insert(String::from("args"), JsonValue::Array(expr.args.into_iter().map(|a| expr_to_json(a.as_ref().clone())).collect()));
+            let json = JsonValue::Object(call);
+            add_name_to_json(String::from("Call"), json)
+        },
+        Expr::Get(expr) => {
+            let mut get: HashMap<String, JsonValue> = HashMap::new();
+            get.insert(String::from("object"), expr_to_json(expr.object.as_ref().clone()));
+            get.insert(String::from("name"), JsonValue::String(expr.name.lexeme));
+            let json = JsonValue::Object(get);
+            add_name_to_json(String::from("Get"), json)
+        },
         // Expr::Variable(var) => {
         //     let mut variable: HashMap<String, JsonValue> = HashMap::new();
         //     variable.insert(String::from("name"), JsonValue::String(var.lexeme));
